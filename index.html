@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SUPERFLIGHT — World Labs × Three.js</title>
+    <style>
+      :root {
+        --gold: #ffd27a;
+        --ink: rgba(8, 10, 16, 0.55);
+      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { height: 100%; overflow: hidden; background: #06070b; }
+      body { font-family: "Avenir Next", "Helvetica Neue", -apple-system, sans-serif; color: #f4f1e8; }
+      canvas { display: block; }
+
+      #app { position: fixed; inset: 0; }
+
+      /* ---------- Loading screen ---------- */
+      #loader {
+        position: fixed; inset: 0; z-index: 40;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        background: radial-gradient(120% 120% at 50% 20%, #11141f 0%, #06070b 70%);
+        transition: opacity 0.9s ease;
+      }
+      #loader.hidden { opacity: 0; pointer-events: none; }
+      #loader .mark {
+        font-size: 11px; letter-spacing: 0.55em; text-transform: uppercase;
+        color: var(--gold); opacity: 0.9; margin-bottom: 18px;
+      }
+      #loader h1 {
+        font-size: clamp(38px, 7vw, 84px); font-weight: 700; letter-spacing: 0.12em;
+        background: linear-gradient(180deg, #fff7e3 20%, #f0b54a 90%);
+        -webkit-background-clip: text; background-clip: text; color: transparent;
+        text-transform: uppercase;
+      }
+      #loader .sub { margin-top: 14px; font-size: 13px; letter-spacing: 0.2em; color: #9aa3b5; text-transform: uppercase; }
+      #bar-wrap { width: min(420px, 70vw); height: 2px; background: rgba(255,255,255,0.12); margin-top: 38px; border-radius: 2px; overflow: hidden; }
+      #bar { width: 0%; height: 100%; background: linear-gradient(90deg, #f0b54a, #ffe9b8); transition: width 0.25s ease; }
+      #loader .tip { margin-top: 16px; font-size: 12px; color: #6f7889; letter-spacing: 0.08em; }
+
+      /* ---------- Start prompt ---------- */
+      #start {
+        position: fixed; inset: 0; z-index: 30; display: none;
+        align-items: center; justify-content: center; flex-direction: column;
+        background: rgba(4, 5, 9, 0.35); backdrop-filter: blur(2px);
+        cursor: pointer; transition: opacity 0.6s ease;
+      }
+      #start.visible { display: flex; }
+      #start.hidden { opacity: 0; pointer-events: none; }
+      #start .cta {
+        padding: 18px 44px; border: 1px solid rgba(255, 210, 122, 0.6); border-radius: 999px;
+        font-size: 14px; letter-spacing: 0.4em; text-transform: uppercase; color: var(--gold);
+        background: rgba(10, 12, 18, 0.5);
+        animation: pulse 2.4s ease-in-out infinite;
+      }
+      @keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(240,181,74,0.25);} 50% { box-shadow: 0 0 34px 4px rgba(240,181,74,0.25);} }
+      #start .hint { margin-top: 18px; font-size: 12px; letter-spacing: 0.18em; color: #aab3c4; text-transform: uppercase; }
+
+      /* ---------- HUD ---------- */
+      #hud { position: fixed; inset: 0; z-index: 20; pointer-events: none; opacity: 0; transition: opacity 1s ease; }
+      #hud.visible { opacity: 1; }
+
+      #controls {
+        position: absolute; left: 28px; bottom: 24px;
+        font-size: 11px; letter-spacing: 0.14em; line-height: 2; color: #cfd6e4;
+        text-transform: uppercase; text-shadow: 0 1px 8px rgba(0,0,0,0.8);
+        background: var(--ink); padding: 14px 18px; border-radius: 12px;
+        border: 1px solid rgba(255,255,255,0.07);
+      }
+      #controls b { color: var(--gold); font-weight: 600; margin-right: 6px; }
+
+      #speedo {
+        position: absolute; right: 28px; bottom: 24px; text-align: right;
+        text-shadow: 0 1px 8px rgba(0,0,0,0.8);
+      }
+      #speed-val { font-size: 42px; font-weight: 700; letter-spacing: 0.04em; color: #fff; font-variant-numeric: tabular-nums; }
+      #speed-unit { font-size: 11px; letter-spacing: 0.3em; color: #9aa3b5; text-transform: uppercase; }
+      #boost-wrap { width: 140px; height: 3px; background: rgba(255,255,255,0.15); border-radius: 3px; margin: 10px 0 0 auto; overflow: hidden; }
+      #boost { width: 0%; height: 100%; background: linear-gradient(90deg, #f0b54a, #ffe9b8); border-radius: 3px; }
+
+      #title-chip {
+        position: absolute; top: 24px; left: 28px;
+        font-size: 11px; letter-spacing: 0.5em; text-transform: uppercase; color: rgba(244,241,232,0.75);
+        text-shadow: 0 1px 8px rgba(0,0,0,0.8);
+      }
+      #title-chip span { color: var(--gold); }
+
+      /* cinematic letterbox on boost */
+      .bar-top, .bar-bot {
+        position: absolute; left: 0; right: 0; height: 0; background: #000; transition: height 0.5s cubic-bezier(.65,0,.35,1);
+      }
+      .bar-top { top: 0; } .bar-bot { bottom: 0; }
+      #hud.boosting .bar-top, #hud.boosting .bar-bot { height: 6vh; }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+
+    <div id="hud">
+      <div class="bar-top"></div>
+      <div class="bar-bot"></div>
+      <div id="title-chip">superflight <span>/ marble world</span></div>
+      <div id="controls">
+        <div><b>mouse</b> steer</div>
+        <div><b>w</b> fly &nbsp; <b>shift</b> sonic boost</div>
+        <div><b>s</b> brake &nbsp; <b>space</b> rise &nbsp; <b>c</b> dive</div>
+        <div><b>esc</b> release cursor</div>
+      </div>
+      <div id="speedo">
+        <div id="speed-val">0</div>
+        <div id="speed-unit">km/h</div>
+        <div id="boost-wrap"><div id="boost"></div></div>
+      </div>
+    </div>
+
+    <div id="start" class="">
+      <div class="cta">Click to take flight</div>
+      <div class="hint">mouse steers &middot; W to fly &middot; shift to break the sound barrier</div>
+    </div>
+
+    <div id="loader">
+      <div class="mark">World Labs &times; Three.js</div>
+      <h1>Superflight</h1>
+      <div class="sub">a gaussian-splat world you can fly through</div>
+      <div id="bar-wrap"><div id="bar"></div></div>
+      <div class="tip" id="load-tip">warming up the cape&hellip;</div>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

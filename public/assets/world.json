@@ -1,0 +1,13 @@
+{
+  "splatUrl": "/assets/world.spz",
+  "colliderUrl": "/assets/collider.glb",
+  "flipSplat": true,
+  "worldScale": 5.229919,
+  "spawn": [0, 4, 0],
+  "spawnYaw": 0,
+  "boundsCenter": [0, 12, -42],
+  "boundsRadius": 62,
+  "ceiling": 48,
+  "caption": "Epic golden-hour mountain canyon — World Labs Marble (marble-1.1-plus)",
+  "worldId": "8595a857-696f-4e1f-9dac-c571be7f1479"
+}
