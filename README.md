@@ -24,7 +24,9 @@ Open http://localhost:5173, click **Take Flight**.
 | `Space` / `C` | Rise / dive |
 | `Esc` | Release cursor |
 
-Debug: `/?pose=1` freezes the full flight pose with an orbit camera; `/?nopost` disables post-processing.
+Debug: `/?pose=1` freezes the full flight pose with an orbit camera; `/?nopost` disables post-processing;
+`/?hq` loads the full-res splat (default is the 500k version per Spark's performance guidance, with
+`maxStdDev: √5`, no MSAA, capped pixel ratio, and adaptive resolution scaling).
 
 ## What's inside
 

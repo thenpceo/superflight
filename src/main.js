@@ -21,7 +21,9 @@ const speedEl = document.getElementById('speed-val');
 const boostEl = document.getElementById('boost');
 
 const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+// splat rendering is fill-rate bound — high DPR costs far more than it adds
+const BASE_DPR = Math.min(devicePixelRatio, 1.5);
+renderer.setPixelRatio(BASE_DPR);
 renderer.setSize(innerWidth, innerHeight);
 renderer.toneMapping = THREE.NoToneMapping; // splat colors are already photographic
 app.appendChild(renderer.domElement);
@@ -31,7 +33,8 @@ scene.background = new THREE.Color(0x0a0c12);
 
 const camera = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, 0.03, 1400);
 
-const spark = new SparkRenderer({ renderer });
+// maxStdDev √5 ≈ perceptually identical to the default √8, much less overdraw
+const spark = new SparkRenderer({ renderer, maxStdDev: Math.sqrt(5) });
 scene.add(spark);
 
 // warm golden-hour key + cool ambient fill for the character
@@ -132,6 +135,25 @@ addEventListener('resize', () => {
 const clock = new THREE.Clock();
 let hudTick = 0;
 
+// ---- adaptive resolution: trade pixels for frame rate ----
+const adapt = { scale: 1, acc: 0, n: 0, cooldown: 0 };
+function adaptResolution(rawDt) {
+  adapt.acc += rawDt; adapt.n++; adapt.cooldown -= rawDt;
+  if (adapt.n < 45 || adapt.cooldown > 0) return;
+  const avg = adapt.acc / adapt.n;
+  adapt.acc = 0; adapt.n = 0;
+  let next = adapt.scale;
+  if (avg > 1 / 42 && adapt.scale > 0.62) next = Math.max(0.62, adapt.scale - 0.12);
+  else if (avg < 1 / 70 && adapt.scale < 1) next = Math.min(1, adapt.scale + 0.06);
+  if (next !== adapt.scale) {
+    adapt.scale = next;
+    adapt.cooldown = 1.5;
+    renderer.setPixelRatio(BASE_DPR * adapt.scale);
+    renderer.setSize(innerWidth, innerHeight);
+    post?.composer.setSize(innerWidth, innerHeight);
+  }
+}
+
 function tick(dt) {
   if (character.model) {
     let state;
@@ -168,7 +190,11 @@ function tick(dt) {
   else renderer.render(scene, camera);
 }
 
-renderer.setAnimationLoop(() => tick(Math.min(clock.getDelta(), 1 / 20)));
+renderer.setAnimationLoop(() => {
+  const raw = clock.getDelta();
+  if (document.visibilityState === 'visible') adaptResolution(Math.min(raw, 0.25));
+  tick(Math.min(raw, 1 / 20));
+});
 
 boot();
 

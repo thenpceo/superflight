@@ -1,5 +1,6 @@
 {
-  "splatUrl": "/assets/world.spz",
+  "splatUrl": "/assets/world_500k.spz",
+  "splatUrlHq": "/assets/world.spz",
   "colliderUrl": "/assets/collider.glb",
   "flipSplat": true,
   "worldScale": 5.229919,

@@ -29,8 +29,10 @@ export class World {
     this.spawnYaw = manifest.spawnYaw ?? 0;
 
     // --- gaussian splat scene ---
+    // 500k-splat world by default; ?hq opts into the full-res splat
+    const hq = new URLSearchParams(location.search).has('hq');
     this.splat = new SplatMesh({
-      url: manifest.splatUrl,
+      url: (hq && manifest.splatUrlHq) || manifest.splatUrl,
       onLoad: () => onProgress({ splat: 1 }),
     });
     // Marble/Spark assets are OpenCV-convention (Y down) — flip to three.js Y-up.
@@ -90,7 +92,7 @@ export class World {
     const r = d.length();
     if (r > this.boundsRadius) {
       const over = r - this.boundsRadius;
-      out.copy(d).normalize().multiplyScalar(-over * over * 0.15);
+      out.copy(d).normalize().multiplyScalar(-over * (0.6 + over * 0.35));
     }
     // gentle ceiling so we don't fly into the unscanned sky forever
     const ceil = this.boundsCenter.y + (this.manifest?.ceiling ?? this.boundsRadius * 0.8);

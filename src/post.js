@@ -15,9 +15,10 @@ import * as THREE from 'three';
  * chromatic aberration that intensifies during boost.
  */
 export function createPost(renderer, scene, camera) {
+  // no MSAA: splats are pre-blended gaussians and gain nothing from it,
+  // while multisampled HalfFloat buffers are a major fill-rate cost
   const composer = new EffectComposer(renderer, {
     frameBufferType: THREE.HalfFloatType,
-    multisampling: Math.min(4, renderer.capabilities.maxSamples ?? 0),
   });
   composer.addPass(new RenderPass(scene, camera));
 
