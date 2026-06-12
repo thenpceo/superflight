@@ -43,11 +43,11 @@ export class Lex {
     const loader = new GLTFLoader();
     loader.setMeshoptDecoder(MeshoptDecoder);
     const [lexGltf, chunkGltf] = await Promise.all([
-      loader.loadAsync('/assets/lex_luthor.glb'),
+      loader.loadAsync('/assets/lex_rigged.glb'),
       loader.loadAsync('/assets/chunk_opt.glb'),
     ]);
 
-    // ---- the man himself ----
+    // ---- the man himself (rigged Justice League suit) ----
     this.model = lexGltf.scene;
     const box = new THREE.Box3().setFromObject(this.model);
     const size = box.getSize(new THREE.Vector3());
@@ -55,7 +55,35 @@ export class Lex {
     this.model.scale.setScalar(scale);
     box.setFromObject(this.model);
     this.model.position.y = -box.min.y - 1.0; // feet ≈ 1m below group center
-    this.model.traverse((o) => { if (o.isMesh) { o.frustumCulled = false; } });
+    this.bones = {};
+    this.model.traverse((o) => {
+      if (o.isMesh || o.isSkinnedMesh) o.frustumCulled = false;
+      if (o.isBone) {
+        // GLTFLoader sanitizes "Bip001 R UpperArm_048" → "Bip001_R_UpperArm_048"
+        for (const key of ['R_Clavicle', 'R_UpperArm', 'R_Forearm', 'R_Hand', 'Head', 'Neck']) {
+          if (o.name.includes(key)) this.bones[key] = this.bones[key] ?? o;
+        }
+      }
+    });
+
+    // idle animation straight off the asset
+    this.mixer = new THREE.AnimationMixer(this.model);
+    const clips = lexGltf.animations ?? [];
+    if (clips.length) {
+      const idle = clips.reduce((a, b) => (b.duration > a.duration ? b : a));
+      this.mixer.clipAction(idle).play();
+      // the idle's root motion floats him — re-ground against the animated pose
+      this.mixer.update(0.05);
+      this.model.updateMatrixWorld(true);
+      const animBox = new THREE.Box3().setFromObject(this.model);
+      this.model.position.y -= animBox.min.y - (-1.25); // feet just above the platform
+    }
+
+    // additive throw gesture: arm sweeps overhead during the telegraph
+    this._armK = 0;
+    this._qArm = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, -2.3));
+    this._qFore = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, -0.4));
+    this._qIdent = new THREE.Quaternion();
     this.tilt.add(this.model);
 
     // ---- hover platform ----
@@ -129,7 +157,7 @@ export class Lex {
     mesh.position.y = -3.2; // roughly center the geometry (base at 0 in source)
     const fx = this.vfx.makeLightning(4.2);
     holder.add(fx);
-    holder.position.copy(this.position).add(new THREE.Vector3(0, 7.5, 0));
+    holder.position.copy(this.position).add(new THREE.Vector3(0, 5.2, 0));
     this.scene.add(holder);
 
     // lead the target: aim where the player will be
@@ -207,7 +235,7 @@ export class Lex {
       } else if (this.state === 'telegraph') {
         // chunk hovers above him, crackling, then launches
         if (this._pending && !this._pending.dead) {
-          this._pending.holder.position.copy(this.position).add(new THREE.Vector3(0, 7.5 + Math.sin(this._stateT * 9) * 0.5, 0));
+          this._pending.holder.position.copy(this.position).add(new THREE.Vector3(0, 5.2 + Math.sin(this._stateT * 9) * 0.5, 0));
         }
         this._lungeK = Math.min(1, this._stateT / TELEGRAPH_TIME);
         if (this._stateT >= TELEGRAPH_TIME) {
@@ -246,6 +274,18 @@ export class Lex {
         this.vfx.shockwave(this.position, 0xffc080, 30, 1);
       }
       if (this._crashed) this.velocity.set(0, 0, 0);
+    }
+
+    // ---- skeletal idle + additive throw gesture ----
+    this.mixer?.update(dt);
+    const armTarget = this.state === 'telegraph' ? Math.min(1, this._stateT / (TELEGRAPH_TIME * 0.55)) : 0;
+    this._armK += (armTarget - this._armK) * Math.min(1, (armTarget > this._armK ? 9 : 6) * dt);
+    if (this._armK > 0.003) {
+      const k = THREE.MathUtils.smoothstep(this._armK, 0, 1);
+      const up = this.bones['R_UpperArm'], fore = this.bones['R_Forearm'];
+      // local additive rotation on top of whatever the idle is doing
+      if (up) up.quaternion.multiply(this._qIdent.clone().slerp(this._qArm, k));
+      if (fore) fore.quaternion.multiply(this._qIdent.clone().slerp(this._qFore, k));
     }
 
     // ---- procedural body animation ----

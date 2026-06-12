@@ -31,8 +31,9 @@ Debug: `?pose=1` pose inspector, `?nopost` disables post-processing. Dev console
 - **Sky** — three.js `Sky` shader with a ~5-minute day cycle (sun elevation/azimuth swing, never full night),
   sun-tracked directional + hemisphere lights, fog color sync, drifting billboard clouds,
   and a procedural ridge-ring of mountains on the horizon.
-- **Lex Luthor** — the GLB is an unrigged Sketchfab scan of the Injustice warsuit, so animation is
-  procedural: hover-platform villain with bob/bank/lunge/stagger, green rim + thruster + point-light glow.
+- **Lex Luthor** — rigged Justice League power-suit GLB with its own idle animations (mixer-driven),
+  plus additive procedural gestures: the right arm sweeps overhead during throw telegraphs, and the
+  hover platform banks/lunges/staggers. Green rim + thruster + point-light glow.
   AI: chase (catch-up boost when far), orbit-strafe at preferred range, telegraphed throws.
 - **Building chunks** — one shared meshopt geometry; spin, green arc-lightning (jittered LineSegments),
   flickering glow + light; aimed at your *predicted* position; smoke burst + knockback + stumble on hit;
