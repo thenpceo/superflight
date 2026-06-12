@@ -179,6 +179,8 @@ export class Character {
     }
     // hard safety: no particle may stray beyond the cape's full length from its anchor
     const maxR = restY * (H - 1) * 1.25;
+    // and none may wrap over the shoulders in front of the back plane
+    const backDir = new THREE.Vector3(0, 0, -1).transformDirection(spine.matrixWorld); // model-local -z = behind
     for (let i = W; i < pts.length; i++) {
       const ax = pts[i % W].x, ay = pts[i % W].y, az = pts[i % W].z;
       const dx = pts[i].x - ax, dy = pts[i].y - ay, dz = pts[i].z - az;
@@ -187,6 +189,13 @@ export class Character {
         const s = maxR / d;
         pts[i].set(ax + dx * s, ay + dy * s, az + dz * s);
         prev[i].copy(pts[i]);
+      }
+      // front-of-plane containment
+      const fwdAmt = -(dx * backDir.x + dy * backDir.y + dz * backDir.z); // >0 means in front
+      if (fwdAmt > 0.12) {
+        const push = (fwdAmt - 0.12) * 0.65;
+        pts[i].addScaledVector(backDir, push);
+        prev[i].addScaledVector(backDir, push * 0.9);
       }
     }
     // write to geometry

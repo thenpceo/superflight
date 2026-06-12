@@ -92,6 +92,92 @@
       }
       .bar-top { top: 0; } .bar-bot { bottom: 0; }
       #hud.boosting .bar-top, #hud.boosting .bar-bot { height: 6vh; }
+
+      /* ---------- combat HUD ---------- */
+      #lex-bar {
+        position: absolute; top: 26px; left: 50%; transform: translateX(-50%);
+        width: min(520px, 52vw); text-align: center;
+      }
+      #lex-name {
+        font-size: 12px; letter-spacing: 0.5em; text-transform: uppercase; color: #b8ffc2;
+        text-shadow: 0 0 14px rgba(70,255,110,0.6); margin-bottom: 7px;
+      }
+      #lex-name span { color: #6f7889; font-size: 10px; letter-spacing: 0.2em; margin-left: 10px; }
+      #lex-track { height: 5px; background: rgba(255,255,255,0.12); border-radius: 4px; overflow: hidden; border: 1px solid rgba(110,255,140,0.25); }
+      #lex-fill { height: 100%; width: 100%; background: linear-gradient(90deg, #2fdc52, #a8ffb8); transition: width 0.15s ease; box-shadow: 0 0 12px rgba(80,255,120,0.7); }
+
+      #player-bars {
+        position: absolute; bottom: 26px; left: 50%; transform: translateX(-50%);
+        width: min(380px, 42vw);
+      }
+      #hp-track { height: 7px; background: rgba(255,255,255,0.12); border-radius: 5px; overflow: hidden; border: 1px solid rgba(255,255,255,0.15); }
+      #hp-fill { height: 100%; width: 100%; background: linear-gradient(90deg, #ffb13b, #ffe9b8); transition: width 0.15s ease; }
+      #hp-fill.low { background: linear-gradient(90deg, #ff3b3b, #ff9a6a); animation: hp-pulse 0.8s ease-in-out infinite; }
+      @keyframes hp-pulse { 0%,100% { filter: brightness(1);} 50% { filter: brightness(1.6);} }
+      #heat-track { height: 3px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden; margin-top: 6px; }
+      #heat-fill { height: 100%; width: 0%; background: #ff5040; transition: width 0.1s linear; }
+      #heat-fill.over { background: #ff2020; animation: hp-pulse 0.4s ease-in-out infinite; }
+      #punch-hint {
+        margin-top: 8px; text-align: center; font-size: 10px; letter-spacing: 0.35em;
+        text-transform: uppercase; color: #6f7889; transition: all 0.15s ease;
+      }
+      #punch-hint.ready { color: #ffe9b8; text-shadow: 0 0 12px rgba(255,210,120,0.8); }
+
+      #crosshair {
+        position: absolute; left: 50%; top: 50%; width: 6px; height: 6px;
+        transform: translate(-50%, -50%); border-radius: 50%;
+        background: rgba(255,255,255,0.55); box-shadow: 0 0 6px rgba(0,0,0,0.6);
+        transition: transform 0.08s ease, background 0.08s ease;
+      }
+      #crosshair.hit { background: #ff5040; transform: translate(-50%, -50%) scale(1.9); }
+
+      #dmg-vignette {
+        position: absolute; inset: 0; pointer-events: none; opacity: 0;
+        background: radial-gradient(ellipse at center, rgba(255,0,0,0) 46%, rgba(255,30,20,0.45) 100%);
+      }
+      #dmg-vignette.show { animation: dmg 0.7s ease-out; }
+      @keyframes dmg { 0% { opacity: 1; } 100% { opacity: 0; } }
+
+      #banner {
+        position: absolute; top: 18%; left: 50%; transform: translateX(-50%);
+        font-size: clamp(20px, 3.2vw, 38px); font-weight: 700; letter-spacing: 0.45em;
+        text-transform: uppercase; color: #eaffee; opacity: 0; white-space: nowrap;
+        text-shadow: 0 0 30px rgba(90,255,130,0.8), 0 2px 10px rgba(0,0,0,0.8);
+      }
+      #banner.show { animation: banner 3s ease-out; }
+      @keyframes banner {
+        0% { opacity: 0; transform: translateX(-50%) scale(1.25); }
+        12% { opacity: 1; transform: translateX(-50%) scale(1); }
+        75% { opacity: 1; }
+        100% { opacity: 0; }
+      }
+
+      #lex-dist { font-size: 10px; letter-spacing: 0.2em; color: #8aa893; margin-top: 5px; }
+
+      /* ---------- end screen ---------- */
+      #end {
+        position: fixed; inset: 0; z-index: 35; display: flex; flex-direction: column;
+        align-items: center; justify-content: center; gap: 18px;
+        background: rgba(3,4,7,0.62); backdrop-filter: blur(6px);
+        opacity: 0; pointer-events: none; transition: opacity 0.7s ease;
+      }
+      #end.visible { opacity: 1; pointer-events: auto; }
+      #end-title {
+        font-size: clamp(46px, 9vw, 110px); font-weight: 800; letter-spacing: 0.18em;
+        text-transform: uppercase;
+        background: linear-gradient(180deg, #ffd2c2 10%, #c22e16 90%);
+        -webkit-background-clip: text; background-clip: text; color: transparent;
+      }
+      #end-title.won { background: linear-gradient(180deg, #fff7e3 20%, #f0b54a 90%); -webkit-background-clip: text; background-clip: text; }
+      #end-sub { font-size: 13px; letter-spacing: 0.22em; color: #aab3c4; text-transform: uppercase; }
+      #restart {
+        margin-top: 16px; padding: 14px 40px; border-radius: 999px; cursor: pointer;
+        border: 1px solid rgba(255,210,122,0.6); background: rgba(10,12,18,0.6);
+        font-size: 13px; letter-spacing: 0.4em; text-transform: uppercase; color: var(--gold);
+        font-family: inherit;
+      }
+      #restart:hover { background: rgba(40,34,18,0.8); }
+      #end .key-hint { font-size: 10px; letter-spacing: 0.3em; color: #5e6678; text-transform: uppercase; }
     </style>
   </head>
   <body>
@@ -100,13 +186,26 @@
     <div id="hud">
       <div class="bar-top"></div>
       <div class="bar-bot"></div>
-      <div id="title-chip">superflight <span>/ marble world</span></div>
+      <div id="title-chip">superflight <span>/ showdown over the city</span></div>
       <div id="controls">
         <div><b>mouse</b> steer</div>
-        <div><b>w</b> fly &nbsp; <b>shift</b> sonic boost</div>
-        <div><b>s</b> brake &nbsp; <b>space</b> rise &nbsp; <b>c</b> dive</div>
-        <div><b>esc</b> release cursor</div>
+        <div><b>w</b> fly &nbsp; <b>shift</b> boost</div>
+        <div><b>space</b> rise &nbsp; <b>c</b> dive &nbsp; <b>s</b> brake</div>
+        <div><b>right-click</b> laser &nbsp; <b>left-click</b> punch</div>
       </div>
+      <div id="lex-bar">
+        <div id="lex-name">Lex Luthor <span>warsuit mk. iv</span></div>
+        <div id="lex-track"><div id="lex-fill"></div></div>
+        <div id="lex-dist">—</div>
+      </div>
+      <div id="player-bars">
+        <div id="hp-track"><div id="hp-fill"></div></div>
+        <div id="heat-track"><div id="heat-fill"></div></div>
+        <div id="punch-hint">punch range</div>
+      </div>
+      <div id="crosshair"></div>
+      <div id="dmg-vignette"></div>
+      <div id="banner"></div>
       <div id="speedo">
         <div id="speed-val">0</div>
         <div id="speed-unit">km/h</div>
@@ -116,13 +215,20 @@
 
     <div id="start" class="">
       <div class="cta">Click to take flight</div>
-      <div class="hint">mouse steers &middot; W to fly &middot; shift to break the sound barrier</div>
+      <div class="hint">Lex Luthor is tearing the city apart &middot; laser him from afar &middot; punch him up close</div>
+    </div>
+
+    <div id="end">
+      <div id="end-title">DEFEATED</div>
+      <div id="end-sub"></div>
+      <button id="restart">Fly Again</button>
+      <div class="key-hint">or press R</div>
     </div>
 
     <div id="loader">
       <div class="mark">World Labs &times; Three.js</div>
       <h1>Superflight</h1>
-      <div class="sub">a gaussian-splat world you can fly through</div>
+      <div class="sub">showdown over the city &mdash; lex luthor awaits</div>
       <div id="bar-wrap"><div id="bar"></div></div>
       <div class="tip" id="load-tip">warming up the cape&hellip;</div>
     </div>

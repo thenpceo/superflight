@@ -1,11 +1,15 @@
 import * as THREE from 'three';
-import { SparkRenderer } from '@sparkjsdev/spark';
-import { World } from './world.js';
+import { City } from './city.js';
+import { SkySystem } from './sky.js';
 import { Character } from './character.js';
 import { FlightController } from './flight.js';
 import { CameraRig } from './cameraRig.js';
 import { createPost } from './post.js';
-import { WindAudio } from './audio.js';
+import { WindAudio, SFX } from './audio.js';
+import { VFX } from './vfx.js';
+import { Lex } from './lex.js';
+import { Game } from './game.js';
+import { HUD } from './hud.js';
 
 const params = new URLSearchParams(location.search);
 const NO_POST = params.has('nopost');
@@ -21,97 +25,58 @@ const speedEl = document.getElementById('speed-val');
 const boostEl = document.getElementById('boost');
 
 const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' });
-// splat rendering is fill-rate bound — high DPR costs far more than it adds
 const BASE_DPR = Math.min(devicePixelRatio, 1.5);
 renderer.setPixelRatio(BASE_DPR);
 renderer.setSize(innerWidth, innerHeight);
-renderer.toneMapping = THREE.NoToneMapping; // splat colors are already photographic
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 0.58; // the Sky shader is calibrated for ~0.5
+
 app.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x0a0c12);
+const camera = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, 0.03, 9500);
 
-const camera = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, 0.03, 1400);
+const sky = new SkySystem(scene, renderer);
+const vfx = new VFX(scene);
+const city = new City(scene);
+const character = new Character(scene);
+const lex = new Lex(scene, vfx);
 
-// maxStdDev √5 ≈ perceptually identical to the default √8, much less overdraw
-const spark = new SparkRenderer({ renderer, maxStdDev: Math.sqrt(5) });
-scene.add(spark);
-
-// warm golden-hour key + cool ambient fill for the character
-const hemi = new THREE.HemisphereLight(0xffe6c0, 0x4a4f5e, 1.15);
-scene.add(hemi);
-const sun = new THREE.DirectionalLight(0xffd9a0, 2.2);
-sun.position.set(-30, 40, -10);
-scene.add(sun);
-const rim = new THREE.DirectionalLight(0x9fc3ff, 0.7);
-rim.position.set(25, 12, 30);
-scene.add(rim);
-
-let progress = { splat: 0, char: 0 };
+let progress = { city: 0, char: 0, lex: 0 };
 const setBar = () => {
-  const p = (progress.splat * 0.7 + progress.char * 0.3) * 100;
+  const p = (progress.city * 0.5 + progress.char * 0.25 + progress.lex * 0.25) * 100;
   barEl.style.width = `${p}%`;
 };
 
-const world = new World(scene);
-const character = new Character(scene);
-
 async function boot() {
-  tipEl.textContent = 'loading the marble world…';
-  let worldOk = true;
-  try {
-    await world.load((p) => { progress.splat = p.splat ?? progress.splat; setBar(); });
-  } catch (e) {
-    console.warn('world manifest missing — using placeholder environment', e);
-    worldOk = false;
-    buildPlaceholder();
-  }
-  progress.splat = 1; setBar();
+  tipEl.textContent = 'raising the skyline…';
+  await city.load();
+  progress.city = 1; setBar();
 
   tipEl.textContent = 'suiting up…';
   await character.load();
   progress.char = 1; setBar();
 
-  if (!worldOk) {
-    world.spawn.set(0, 3, 0);
-    world.boundsRadius = 60;
-  }
-  // flight was constructed before the manifest arrived — re-seed placement
-  flight.position.copy(world.spawn);
-  flight.yaw = world.spawnYaw;
+  tipEl.textContent = 'lex is monologuing…';
+  await lex.load();
+  progress.lex = 1; setBar();
+
+  // place the player & the villain
+  flight.position.copy(city.spawn);
+  flight.yaw = city.spawnYaw;
+  lex.position.copy(city.spawn).add(new THREE.Vector3(0, 12, -150));
 
   loaderEl.classList.add('hidden');
   startEl.classList.add('visible');
 }
 
-function buildPlaceholder() {
-  scene.background = new THREE.Color(0x131726);
-  scene.fog = new THREE.Fog(0x131726, 30, 160);
-  const ground = new THREE.Mesh(
-    new THREE.PlaneGeometry(400, 400, 64, 64),
-    new THREE.MeshStandardMaterial({ color: 0x2a3040, roughness: 1 })
-  );
-  ground.rotation.x = -Math.PI / 2;
-  scene.add(ground);
-  const grid = new THREE.GridHelper(400, 80, 0x4a5670, 0x323a4e);
-  grid.position.y = 0.01;
-  scene.add(grid);
-  for (let i = 0; i < 40; i++) {
-    const h = 2 + Math.random() * 12;
-    const box = new THREE.Mesh(
-      new THREE.BoxGeometry(2 + Math.random() * 4, h, 2 + Math.random() * 4),
-      new THREE.MeshStandardMaterial({ color: 0x39415a, roughness: 0.9 })
-    );
-    const a = Math.random() * Math.PI * 2, r = 14 + Math.random() * 70;
-    box.position.set(Math.cos(a) * r, h / 2, Math.sin(a) * r);
-    scene.add(box);
-  }
-}
-
-const flight = new FlightController(world, renderer.domElement);
-const rig = new CameraRig(camera, world);
+const flight = new FlightController(city, renderer.domElement);
+const rig = new CameraRig(camera, city);
 const post = NO_POST ? null : createPost(renderer, scene, camera);
 const wind = new WindAudio();
+const sfx = new SFX(wind);
+const hud = new HUD();
+const game = new Game({ flight, character, lex, vfx, rig, sfx, hud });
 
 let started = POSE_DEBUG;
 startEl.addEventListener('click', () => {
@@ -122,7 +87,9 @@ startEl.addEventListener('click', () => {
   started = true;
 });
 renderer.domElement.addEventListener('click', () => {
-  if (started && !document.pointerLockElement) renderer.domElement.requestPointerLock?.();
+  if (started && game.gameActive && !document.pointerLockElement) {
+    renderer.domElement.requestPointerLock?.();
+  }
 });
 
 addEventListener('resize', () => {
@@ -155,27 +122,37 @@ function adaptResolution(rawDt) {
 }
 
 function tick(dt) {
-  if (character.model) {
+  if (character.model && lex.model) {
     let state;
     if (POSE_DEBUG) {
-      // frozen full-speed pose, slow orbit for inspection
       const t = performance.now() / 1000;
       state = {
-        position: new THREE.Vector3(0, 3, 0),
+        position: new THREE.Vector3(0, 60, 0),
         velocity: new THREE.Vector3(0, 0, -20),
         yaw: 0, speed01: 1, boost01: 0, justBoosted: 0,
         bankRoll: 0, velPitch: 0, kmh: 0,
       };
       character.update(dt, state);
-      camera.position.set(Math.sin(t * 0.4) * 5, 3.6, Math.cos(t * 0.4) * 5);
-      camera.lookAt(0, 3, 0);
+      camera.position.set(Math.sin(t * 0.4) * 5, 63, Math.cos(t * 0.4) * 5);
+      camera.lookAt(0, 60, 0);
       camera.fov = 50; camera.updateProjectionMatrix();
+      sky.update(dt, state.position);
     } else {
-      state = flight.update(dt);
-      character.update(dt, state);
-      rig.update(dt, state);
+      const ts = game.timeScale(dt);
+      const sdt = dt * ts;
+      state = flight.update(game.gameActive ? sdt : sdt * 0.2);
+      character.update(sdt, state);
+      lex.update(sdt, {
+        position: flight.position,
+        velocity: flight.velocity,
+        onChunkHit: (c) => game.onChunkHit(c),
+        gameActive: game.gameActive,
+      }, city);
+      game.update(dt, camera);
+      if (!window.__freeCam) rig.update(dt, state);
+      sky.update(dt, flight.position);
+      vfx.update(sdt);
       wind.update(state);
-      post?.update(state);
 
       hudTick += dt;
       if (hudTick > 0.08) {
@@ -192,6 +169,7 @@ function tick(dt) {
 
 renderer.setAnimationLoop(() => {
   const raw = clock.getDelta();
+  if (window.__pause) return; // dev: freeze real time, drive via __tick
   if (document.visibilityState === 'visible') adaptResolution(Math.min(raw, 0.25));
   tick(Math.min(raw, 1 / 20));
 });
@@ -199,7 +177,7 @@ renderer.setAnimationLoop(() => {
 boot();
 
 // debug handles for development: drive N frames manually (works in hidden tabs)
-window.__game = { scene, camera, world, character, flight, rig, THREE };
+window.__game = { scene, camera, city, character, flight, rig, lex, game, vfx, sky, THREE };
 window.__tick = (n = 1, dt = 1 / 60) => {
   for (let i = 0; i < n; i++) tick(dt);
   clock.getDelta(); // swallow the elapsed time so the rAF loop doesn't double-step
