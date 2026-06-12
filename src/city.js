@@ -29,7 +29,7 @@ function toFloatGeometry(src, matrix) {
 
 const GRID_X = 5;          // tiles across
 const GRID_Z = 5;          // tiles deep
-const TILE_TARGET = 560;   // meters — normalize the tile footprint to this
+const TILE_TARGET = 700;   // meters — normalize the tile footprint to this
 
 /**
  * The instanced city: one merged geometry per material rendered as
@@ -60,14 +60,19 @@ export class City {
     const root = gltf.scene;
     root.updateMatrixWorld(true);
 
-    // ---- measure and normalize the footprint to TILE_TARGET (y-up) ----
+    // ---- measure and normalize to an EXACTLY square TILE_TARGET footprint ----
+    // (square tiles let us rotate in quarter turns, scattering the model's
+    // vacant lots like parks instead of tiling them into an obvious pattern)
     const wrap = new THREE.Group();
     wrap.add(root);
     wrap.updateMatrixWorld(true);
     let b = new THREE.Box3().setFromObject(wrap);
     let s = b.getSize(new THREE.Vector3());
-    const scale = TILE_TARGET / Math.max(s.x, s.z);
-    wrap.scale.setScalar(scale);
+    const sx = TILE_TARGET / s.x, sz = TILE_TARGET / s.z;
+    wrap.scale.set(sx, (sx + sz) / 2, sz);
+    // recenter so the footprint is centered on the wrap origin
+    const c = b.getCenter(new THREE.Vector3());
+    root.position.x -= c.x; root.position.z -= c.z;
     wrap.updateMatrixWorld(true);
     b = new THREE.Box3().setFromObject(wrap);
     s = b.getSize(new THREE.Vector3());
@@ -105,8 +110,9 @@ export class City {
       for (let gz = 0; gz < GRID_Z; gz++) {
         const x = -this.halfX + (gx + 0.5) * this.tileW;
         const z = -this.halfZ + (gz + 0.5) * this.tileD;
-        // alternate tile rotation 180° so the repetition is less obvious
-        const rotY = (gx + gz) % 2 ? Math.PI : 0;
+        // deterministic quarter-turn scatter — breaks up the repeating
+        // vacant-lot pattern so empty plots read as occasional plazas
+        const rotY = ((gx * 3 + gz * 7 + (gx * gz) % 3) % 4) * (Math.PI / 2);
         tileOrigins.push({ x, z, rotY });
       }
     }
@@ -147,7 +153,7 @@ export class City {
     // ---- ground plane (streets between tiles, and a safety net) ----
     const ground = new THREE.Mesh(
       new THREE.PlaneGeometry(this.halfX * 2 + 1200, this.halfZ * 2 + 1200),
-      new THREE.MeshStandardMaterial({ color: 0x23262e, roughness: 0.95, metalness: 0 })
+      new THREE.MeshStandardMaterial({ color: 0x4a4239, roughness: 0.95, metalness: 0 })
     );
     ground.rotation.x = -Math.PI / 2;
     ground.position.y = -0.05;

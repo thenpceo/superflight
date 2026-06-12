@@ -23,10 +23,10 @@ export const CONFIG = {
   fovBoostKick: 4,
   // ~30% closer than before; boost pulls back only ~half as far
   camHoverOffset: [0, 1.05, 2.8],
-  camFlightOffset: [0, 0.85, 3.4],
-  camBoostOffset: [0, 0.8, 3.7],
+  camFlightOffset: [0, 1.55, 3.6],
+  camBoostOffset: [0, 1.5, 4.0],
   camStiffness: 4.2,       // spring approach rate
-  camLookAhead: 7,
+  camLookAhead: 4.5,
   shakeBase: 0.0016,
   shakeSpeedGain: 0.011,
   shakeBoostBurst: 0.06,

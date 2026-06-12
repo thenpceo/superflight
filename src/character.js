@@ -81,6 +81,9 @@ export class Character {
       if (o.isMesh || o.isSkinnedMesh) {
         o.castShadow = false;
         o.frustumCulled = false;
+        // the asset's cape is skinned to bones the Mixamo clips never touch,
+        // so it hangs frozen — hide it; we simulate our own cloth cape instead
+        if (o.name.toLowerCase().includes('cape')) { o.visible = false; return; }
         const m = o.material;
         if (m) {
           // the asset ships fully metallic + white-emissive + partly transparent,
@@ -115,6 +118,7 @@ export class Character {
 
     // expose the eye origin for the heat-vision laser
     this.eyeBone = this.bones['Head'] || null;
+
     return this;
   }
 
@@ -135,9 +139,9 @@ export class Character {
     this.rig.position.copy(state.position);
     this.heading.rotation.y = state.yaw;
 
-    // the Flying clip bakes the prone pose into the hips — the rig only
-    // adds climb/dive follow and bank
-    const targetPitch = state.velPitch * state.speed01 * 0.55;
+    // the Flying clip bakes the prone pose into the hips but aims the head
+    // ~30° down — trim it back up so level flight reads level and heroic
+    const targetPitch = state.velPitch * state.speed01 * 0.55 + 0.2 * this.poseWeight;
     this.attitude.rotation.order = 'ZYX';
     this.attitude.rotation.x = THREE.MathUtils.lerp(this.attitude.rotation.x, targetPitch, 1 - Math.exp(-6 * dt));
     this.attitude.rotation.z = THREE.MathUtils.lerp(this.attitude.rotation.z, state.bankRoll, 1 - Math.exp(-5 * dt));
@@ -149,7 +153,9 @@ export class Character {
     this.hoverAction.setEffectiveWeight(1 - this.poseWeight);
     this.mixer.update(dt);
 
-    // head up so he looks where he's going while prone
+    // head up so he looks where he's going while prone, and legs drawn
+    // together over the clip's splayed kick frames — keeps the clip's life
+    // in the torso/arms but reads heroic from behind
     const w = this.poseWeight;
     if (w > 0.001) {
       const head = this.bones['Head'];
@@ -157,6 +163,12 @@ export class Character {
         const target = head.quaternion.clone().multiply(this._headQuat);
         head.quaternion.slerp(target, w * (0.3 + 0.55 * state.speed01));
       }
+      const legW = w * 0.62;
+      for (const name of ['RightUpLeg', 'RightLeg', 'RightFoot', 'LeftUpLeg', 'LeftLeg', 'LeftFoot']) {
+        const bone = this.bones[name];
+        if (bone) bone.quaternion.slerp(this._poseQuats[name], legW);
+      }
     }
+
   }
 }

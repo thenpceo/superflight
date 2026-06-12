@@ -2,7 +2,7 @@ import * as THREE from 'three';
 
 const LASER_RANGE = 360;
 const LASER_DPS = 40;
-const STICKY_RADIUS = 3.5; // beam snaps to Lex if your aim passes this close
+const STICKY_RADIUS = 5;   // beam snaps to Lex if your aim passes this close
 const PUNCH_RANGE = 9;
 const PUNCH_DMG = 115;
 const CHUNK_DMG = 18;

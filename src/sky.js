@@ -15,16 +15,31 @@ export class SkySystem {
     this.sunElevation = THREE.MathUtils.degToRad(11);
 
     const tex = new THREE.TextureLoader().load('/assets/sky_equirect.png', (t) => {
-      t.mapping = THREE.EquirectangularReflectionMapping;
       t.colorSpace = THREE.SRGBColorSpace;
-      scene.background = t;
-      scene.environment = t;
+      // environment reflections still come from the panorama
+      const env = t.clone();
+      env.mapping = THREE.EquirectangularReflectionMapping;
+      scene.environment = env;
+      this.dome.material.map = t;
+      this.dome.material.needsUpdate = true;
     });
     this.tex = tex;
-    scene.backgroundIntensity = 1.05;
     scene.environmentIntensity = 0.55;
-    scene.backgroundRotation = new THREE.Euler(0, this.sunAzimuth, 0);
     scene.environmentRotation = new THREE.Euler(0, this.sunAzimuth, 0);
+
+    // dome instead of scene.background so we can sink the painted skyline:
+    // squashed vertically and pushed down, the image's buildings sit mostly
+    // below the real horizon and the sky/clouds dominate
+    this.dome = new THREE.Mesh(
+      new THREE.SphereGeometry(6500, 48, 32),
+      new THREE.MeshBasicMaterial({ side: THREE.BackSide, fog: false, depthWrite: false, toneMapped: true })
+    );
+    this.dome.scale.y = 0.82;
+    this.dome.rotation.y = this.sunAzimuth;
+    this.dome.renderOrder = -10;
+    this.dome.frustumCulled = false;
+    scene.add(this.dome);
+    this._domeDrop = 950;
 
     // dramatic warm key from the painted sun
     this.sun = new THREE.DirectionalLight(0xffb066, 3.6);
@@ -50,7 +65,7 @@ export class SkySystem {
   /** dev hook: rotate the painted sun + matched light together */
   setSunAzimuth(a) {
     this.sunAzimuth = a;
-    this.scene.backgroundRotation.y = a;
+    this.dome.rotation.y = a;
     this.scene.environmentRotation.y = a;
     this._updateSunDir();
   }
@@ -63,6 +78,7 @@ export class SkySystem {
       this.sun.target.position.copy(focus);
       this.sun.target.updateMatrixWorld();
       this.rim.position.add(focus);
+      this.dome.position.set(focus.x, focus.y - this._domeDrop, focus.z);
     }
   }
 }

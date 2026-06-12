@@ -33,6 +33,7 @@ export class CameraRig {
     const sideX = THREE.MathUtils.lerp(THREE.MathUtils.lerp(hov[0], fly[0], s), bst[0], b);
     const height = THREE.MathUtils.lerp(THREE.MathUtils.lerp(hov[1], fly[1], s), bst[1], b);
     const dist = THREE.MathUtils.lerp(THREE.MathUtils.lerp(hov[2], fly[2], s), bst[2], b);
+    this._idealDist = Math.hypot(dist, height, sideX);
 
     // full look direction (yaw + damped pitch) → free look up/down/left/right
     const pitch = (state.pitch ?? 0) * 0.82;
@@ -58,11 +59,18 @@ export class CameraRig {
     const idealPos = new THREE.Vector3(), idealLook = new THREE.Vector3();
     this._computeIdeal(state, idealPos, idealLook);
 
-    // springy follow — extra lag when boosting for a sense of pull
-    const stiff = CONFIG.camStiffness * (1 - state.boost01 * 0.35);
+    // springy follow — a touch of lag when boosting for a sense of pull
+    const stiff = CONFIG.camStiffness * (1 - state.boost01 * 0.15);
     const k = 1 - Math.exp(-stiff * dt);
     this.pos.lerp(idealPos, k);
     this.look.lerp(idealLook, 1 - Math.exp(-7 * dt));
+
+    // hard tether: lag may stretch the spring, but never beyond ~115% of the
+    // ideal orbit — fixes the camera drifting away during boosted strafes
+    const tether = this.pos.clone().sub(state.position);
+    const tLen = tether.length();
+    const maxLen = this._idealDist * 1.15;
+    if (tLen > maxLen) this.pos.copy(state.position).addScaledVector(tether.normalize(), maxLen);
 
     // occlusion: if a cliff sits between the flyer and the camera, pull in
     if (this.world) {

@@ -34,7 +34,7 @@ export class Ambient {
     if (size.y >= size.x && size.y >= size.z) src.rotation.x = -Math.PI / 2; // length was vertical
     else if (size.x >= size.z) src.rotation.y = -Math.PI / 2;                // length was on X
     ship.add(src);
-    const scale = 110 / Math.max(size.x, size.y, size.z); // ~110m capital ships
+    const scale = 220 / Math.max(size.x, size.y, size.z); // ~220m capital ships
     ship.scale.setScalar(scale);
 
     const H = this.city.halfX;
@@ -45,17 +45,17 @@ export class Ambient {
         const m = ship.clone(true);
         const row = i === 0 ? 0 : 1;
         const side = i === 0 ? 0 : (i === 1 ? -1 : 1);
-        m.position.set(side * 95, (Math.random() - 0.5) * 18, row * 120);
+        m.position.set(side * 190, (Math.random() - 0.5) * 30, row * 240);
         group.add(m);
       }
       const a = (gIdx / SHIP_GROUPS) * Math.PI * 2 + Math.random();
       group.position.set(
         Math.cos(a) * H * 0.7,
-        300 + gIdx * 60 + Math.random() * 40,
+        380 + gIdx * 80 + Math.random() * 50,
         Math.sin(a) * this.city.halfZ * 0.7
       );
       group.rotation.y = Math.random() * Math.PI * 2;
-      group.userData.speed = 3.5 + Math.random() * 3;   // glacial drift
+      group.userData.speed = 7 + Math.random() * 6;     // slow cruise
       group.userData.yawRate = (Math.random() - 0.5) * 0.008;
       this.scene.add(group);
       this.groups.push(group);

@@ -43,7 +43,7 @@ Debug: `?pose=1` pose inspector, `?nopost` disables post-processing. Dev console
   hit-stop, shockwave ring, stagger. Health bars both sides; victory/defeat screens; Esc pauses
   (pointer-lock exit) with click-to-resume.
 - **Character** — Ready Player Me avatar, RPM idle/falling clips + procedural Superman flight pose,
-  verlet-cloth cape with shoulder-plane containment.
+  no cape — the asset cape was rig-frozen and cloth sims fought the Mixamo clips, so he flies clean.
 - **Post & feel** — bloom, grain, vignette, boost-reactive chromatic aberration, speed FOV zoom, camera
   shake, letterbox on boost, procedural wind/laser/impact audio, adaptive resolution scaling.
 - **Music** — "Five Armies" by Kevin MacLeod (incompetech.com), licensed CC-BY 4.0; loops via WebAudio

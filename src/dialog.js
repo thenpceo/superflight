@@ -19,7 +19,7 @@ export class LexDialog {
     this.music = music;
     this.box = document.getElementById('dialog');
     this.textEl = document.getElementById('dialog-text');
-    this._timer = 14 + Math.random() * 8; // first periodic line comes fairly soon
+    this._timer = 20 + Math.random() * 10; // first periodic line
     this._cool = 0;
     this._spokenIntro = false;
     this._audio = null;
@@ -40,7 +40,7 @@ export class LexDialog {
     this.box.classList.add('visible');
     clearTimeout(this._hideT);
     this._hideT = setTimeout(() => this.box.classList.remove('visible'), 5200);
-    this._cool = 9;
+    this._cool = 16;
     return true;
   }
 
@@ -55,7 +55,7 @@ export class LexDialog {
   /** event hooks */
   onGameStart() { if (!this._spokenIntro) { this._spokenIntro = true; this._play(INTRO); } }
   onPlayerDeath() { this._play(TAUNT_DEFEAT); }
-  onPlayerHit() { if (this._cool <= 0 && Math.random() < 0.45) this._play(TAUNT_HURT); }
+  onPlayerHit() { if (this._cool <= 0 && Math.random() < 0.3) this._play(TAUNT_HURT); }
   onLexLowHp() { if (this._cool <= 0) this._play(DESPERATE); }
 
   update(dt, gameActive) {
@@ -63,7 +63,7 @@ export class LexDialog {
     if (!gameActive) return;
     this._timer -= dt;
     if (this._timer <= 0) {
-      this._timer = 26 + Math.random() * 14;
+      this._timer = 45 + Math.random() * 25;
       if (this._cool <= 0) this._play(this._randomLine());
     }
   }
