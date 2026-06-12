@@ -178,6 +178,20 @@
       }
       #restart:hover { background: rgba(40,34,18,0.8); }
       #end .key-hint { font-size: 10px; letter-spacing: 0.3em; color: #5e6678; text-transform: uppercase; }
+
+      /* ---------- pause ---------- */
+      #pause {
+        position: fixed; inset: 0; z-index: 32; display: flex; flex-direction: column;
+        align-items: center; justify-content: center; gap: 14px; cursor: pointer;
+        background: rgba(3,4,7,0.45); backdrop-filter: blur(5px);
+        opacity: 0; pointer-events: none; transition: opacity 0.35s ease;
+      }
+      #pause.visible { opacity: 1; pointer-events: auto; }
+      #pause .p-title {
+        font-size: clamp(30px, 5vw, 54px); font-weight: 800; letter-spacing: 0.4em;
+        text-transform: uppercase; color: #f4f1e8; text-shadow: 0 2px 24px rgba(0,0,0,0.8);
+      }
+      #pause .p-hint { font-size: 12px; letter-spacing: 0.3em; color: #aab3c4; text-transform: uppercase; }
     </style>
   </head>
   <body>
@@ -216,6 +230,11 @@
     <div id="start" class="">
       <div class="cta">Click to take flight</div>
       <div class="hint">Lex Luthor is tearing the city apart &middot; laser him from afar &middot; punch him up close</div>
+    </div>
+
+    <div id="pause">
+      <div class="p-title">Paused</div>
+      <div class="p-hint">click to resume</div>
     </div>
 
     <div id="end">

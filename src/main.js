@@ -5,7 +5,7 @@ import { Character } from './character.js';
 import { FlightController } from './flight.js';
 import { CameraRig } from './cameraRig.js';
 import { createPost } from './post.js';
-import { WindAudio, SFX } from './audio.js';
+import { WindAudio, SFX, Music } from './audio.js';
 import { VFX } from './vfx.js';
 import { Lex } from './lex.js';
 import { Game } from './game.js';
@@ -75,21 +75,44 @@ const rig = new CameraRig(camera, city);
 const post = NO_POST ? null : createPost(renderer, scene, camera);
 const wind = new WindAudio();
 const sfx = new SFX(wind);
+const music = new Music(wind);
 const hud = new HUD();
 const game = new Game({ flight, character, lex, vfx, rig, sfx, hud });
 
 let started = POSE_DEBUG;
+let paused = false;
+const pauseEl = document.getElementById('pause');
+
+function setPaused(v) {
+  if (paused === v) return;
+  paused = v;
+  pauseEl.classList.toggle('visible', v);
+  music.setDucked(v);
+}
+
 startEl.addEventListener('click', () => {
   startEl.classList.add('hidden');
   hudEl.classList.add('visible');
   wind.start();
+  music.start();
   renderer.domElement.requestPointerLock?.();
   started = true;
 });
 renderer.domElement.addEventListener('click', () => {
-  if (started && game.gameActive && !document.pointerLockElement) {
+  if (started && game.gameActive && !paused && !document.pointerLockElement) {
     renderer.domElement.requestPointerLock?.();
   }
+});
+
+// Escape exits pointer lock → that IS the pause button
+document.addEventListener('pointerlockchange', () => {
+  if (!document.pointerLockElement && started && game.gameActive && !POSE_DEBUG) {
+    setPaused(true);
+  }
+});
+pauseEl.addEventListener('click', () => {
+  setPaused(false);
+  renderer.domElement.requestPointerLock?.();
 });
 
 addEventListener('resize', () => {
@@ -122,6 +145,12 @@ function adaptResolution(rawDt) {
 }
 
 function tick(dt) {
+  if (paused) {
+    // frozen world: keep presenting frames so the blur overlay has something behind it
+    if (post) post.composer.render();
+    else renderer.render(scene, camera);
+    return;
+  }
   if (character.model && lex.model) {
     let state;
     if (POSE_DEBUG) {

@@ -1,12 +1,12 @@
 // Central tuning for the whole experience.
 export const CONFIG = {
   // --- flight model (m/s) ---
-  cruiseSpeed: 16,
-  boostSpeed: 46,
+  cruiseSpeed: 21,
+  boostSpeed: 60,
   hoverDrift: 0.35,        // gentle bob amplitude while hovering
   accel: 0.9,              // approach rate toward target speed (1/s)
   brakeAccel: 2.2,
-  verticalSpeed: 10,
+  verticalSpeed: 13,
   yawSensitivity: 0.0021,
   pitchSensitivity: 0.0017,
   pitchLimit: Math.PI * 0.42,

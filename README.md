@@ -28,22 +28,25 @@ Debug: `?pose=1` pose inspector, `?nopost` disables post-processing. Dev console
   merged into 6 geometry/material groups, rendered as a 4×9 grid of InstancedMesh → **6 draw calls,
   ~840k tris** for the whole skyline. Collision via `three-mesh-bvh` (one shared BVH, 36 invisible
   tile colliders; flight/camera rays only test the nearest tiles).
-- **Sky** — three.js `Sky` shader with a ~5-minute day cycle (sun elevation/azimuth swing, never full night),
-  sun-tracked directional + hemisphere lights, fog color sync, drifting billboard clouds,
-  and a procedural ridge-ring of mountains on the horizon.
+- **Sky** — custom stylized-sunset shader dome (violet → magenta → burning-orange gradient, layered sun
+  halo, painterly banding), perpetual golden hour with a slowly creeping sun, warm-tinted billboard
+  clouds, and a mountain ring silhouetted in the haze.
 - **Lex Luthor** — rigged Justice League power-suit GLB with its own idle animations (mixer-driven),
   plus additive procedural gestures: the right arm sweeps overhead during throw telegraphs, and the
   hover platform banks/lunges/staggers. Green rim + thruster + point-light glow.
   AI: chase (catch-up boost when far), orbit-strafe at preferred range, telegraphed throws.
-- **Building chunks** — one shared meshopt geometry; spin, green arc-lightning (jittered LineSegments),
-  flickering glow + light; aimed at your *predicted* position; smoke burst + knockback + stumble on hit;
-  fade-out once past you.
-- **Combat** — laser: heat meter, overheat lockout, 20° aim-assist cone, additive core+glow beam from the
-  leading fist; punch: dash, hit-stop, shockwave ring, stagger. Health bars both sides; victory/defeat
-  screens with soft restart.
+- **Building chunks** — ~52 m pieces of skyline (shared meshopt geometry) with green arc-lightning,
+  kryptonite emissive, flickering glow + light. Dumb-fired at where you ARE at launch — straight line,
+  fully dodgeable. Smoke burst + knockback + stumble on hit; street-impact shockwave plume.
+- **Combat** — laser fires from the EYES toward the crosshair anywhere (lands on buildings with impact
+  sparks), with 3.5 m sticky-aim snap onto Lex for damage; heat meter + overheat lockout. Punch: dash,
+  hit-stop, shockwave ring, stagger. Health bars both sides; victory/defeat screens; Esc pauses
+  (pointer-lock exit) with click-to-resume.
 - **Character** — Ready Player Me avatar, RPM idle/falling clips + procedural Superman flight pose,
   verlet-cloth cape with shoulder-plane containment.
 - **Post & feel** — bloom, grain, vignette, boost-reactive chromatic aberration, speed FOV zoom, camera
   shake, letterbox on boost, procedural wind/laser/impact audio, adaptive resolution scaling.
+- **Music** — "Five Armies" by Kevin MacLeod (incompetech.com), licensed CC-BY 4.0; loops via WebAudio
+  and ducks while paused.
 
 The original World Labs Marble splat world from v1 lives in git history (`git log -- public/assets/world.spz`).

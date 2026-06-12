@@ -29,7 +29,7 @@ function toFloatGeometry(src, matrix) {
 
 const GRID_X = 4;          // tiles across
 const GRID_Z = 9;          // tiles deep — a long Manhattan-style stretch
-const TILE_TARGET = 290;   // meters, longest horizontal side of one tile
+const TILE_TARGET = 580;   // meters — 2x scale, properly tall skyscrapers
 
 /**
  * The instanced city: one merged geometry per material rendered as
@@ -50,7 +50,7 @@ export class City {
     this._ray = new THREE.Raycaster();
     this._ray.firstHitOnly = true;
     this._down = new THREE.Vector3(0, -1, 0);
-    this.halfX = 0; this.halfZ = 0; this.ceiling = 220;
+    this.halfX = 0; this.halfZ = 0; this.ceiling = 430;
   }
 
   async load() {
@@ -157,7 +157,7 @@ export class City {
     this.group.add(ground);
     this.ground = ground;
 
-    this.spawn.set(0, Math.min(70, this.tileH + 25), this.halfZ * 0.55);
+    this.spawn.set(0, Math.min(150, this.tileH + 40), this.halfZ * 0.55);
     this.spawnYaw = 0; // facing -z, down the long axis of the city
     return this;
   }

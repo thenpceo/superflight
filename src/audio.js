@@ -98,3 +98,36 @@ export class SFX {
   punch() { this._noiseBurst(0.16, 350, 0.9); this._noiseBurst(0.4, 120, 0.6); }
   whoosh() { this._noiseBurst(0.5, 1200, 0.25, 'bandpass'); }
 }
+
+/**
+ * Looping background score ("Five Armies" — Kevin MacLeod, CC-BY).
+ * Fades in on start, ducks while paused.
+ */
+export class Music {
+  constructor(wind) { this.wind = wind; this.volume = 0.3; }
+
+  async start() {
+    if (this.started || !this.wind.ctx) return;
+    this.started = true;
+    try {
+      const ctx = this.wind.ctx;
+      const data = await (await fetch('/assets/music.mp3')).arrayBuffer();
+      const buffer = await ctx.decodeAudioData(data);
+      this.gain = ctx.createGain();
+      this.gain.gain.value = 0;
+      this.gain.connect(ctx.destination);
+      const src = ctx.createBufferSource();
+      src.buffer = buffer;
+      src.loop = true;
+      src.connect(this.gain);
+      src.start();
+      this.gain.gain.setTargetAtTime(this.volume, ctx.currentTime, 1.8);
+    } catch (e) {
+      console.warn('music failed to start', e);
+    }
+  }
+
+  setDucked(d) {
+    if (this.gain) this.gain.gain.setTargetAtTime(d ? 0.06 : this.volume, this.wind.ctx.currentTime, 0.4);
+  }
+}

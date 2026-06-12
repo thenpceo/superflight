@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 
-const LASER_RANGE = 230;
+const LASER_RANGE = 360;
 const LASER_DPS = 40;
-const LASER_CONE = Math.cos(THREE.MathUtils.degToRad(20)); // aim-assist cone
+const STICKY_RADIUS = 3.5; // beam snaps to Lex if your aim passes this close
 const PUNCH_RANGE = 9;
 const PUNCH_DMG = 46;
 const CHUNK_DMG = 18;
@@ -130,29 +130,48 @@ export class Game {
     const toLex = lex.position.clone().sub(this.flight.position);
     const dist = toLex.length();
 
-    /* ---------------- laser ---------------- */
+    /* ---------------- laser: free-fire from the eyes ---------------- */
     let beamOn = false;
     if (this.overheated > 0) this.overheated -= dt;
-    if (this.laserHeld && lexAlive && this.overheated <= 0) {
+    if (this.laserHeld && this.overheated <= 0 && this.gameActive) {
+      beamOn = true;
+      this.heat = Math.min(1, this.heat + dt * 0.38);
+      if (this.heat >= 1) { this.overheated = 1.7; this.heat = 1; }
+
       const camFwd = new THREE.Vector3();
       camera.getWorldDirection(camFwd);
-      const aligned = toLex.clone().normalize().dot(camFwd) > LASER_CONE;
-      if (aligned && dist < LASER_RANGE) {
-        beamOn = true;
-        this.heat = Math.min(1, this.heat + dt * 0.38);
-        if (this.heat >= 1) { this.overheated = 1.7; this.heat = 1; }
+      // beam originates between the eyes
+      const head = this.character.bones['Head'];
+      const from = head
+        ? new THREE.Vector3().setFromMatrixPosition(head.matrixWorld)
+        : this.flight.position.clone();
+      from.addScaledVector(camFwd, 0.22).y += 0.06;
+
+      // sticky aim: does the crosshair ray pass within STICKY_RADIUS of Lex?
+      let hittingLex = false;
+      if (lexAlive) {
+        const toLexCam = lex.position.clone().sub(camera.position);
+        const along = toLexCam.dot(camFwd);
+        if (along > 0 && along < LASER_RANGE + 40) {
+          const miss = toLexCam.addScaledVector(camFwd, -along).length();
+          hittingLex = miss < STICKY_RADIUS;
+        }
+      }
+
+      let to;
+      if (hittingLex) {
+        to = lex.position.clone().add(new THREE.Vector3(0, 0.4, 0));
         lex.damage(LASER_DPS * dt, null);
-        // beam from the leading fist to lex's chest
-        const hand = this.character.bones['RightHand'];
-        const from = hand
-          ? new THREE.Vector3().setFromMatrixPosition(hand.matrixWorld)
-          : this.flight.position.clone();
-        const to = lex.position.clone().add(new THREE.Vector3(0, 0.4, 0));
-        this.vfx.setBeam(from, to, true);
         if (Math.random() < 0.3) this.vfx.flash(to.clone().add(new THREE.Vector3().randomDirection().multiplyScalar(0.8)), 0xff4422, 1.6, 0.1);
         this.hud.hitmark();
         if (lex.dead) this._victory();
+      } else {
+        // free fire: the beam lands on whatever the crosshair touches
+        const hit = this.flight.world.raycast(camera.position, camFwd, LASER_RANGE);
+        to = hit ? hit.point : camera.position.clone().addScaledVector(camFwd, LASER_RANGE);
+        if (hit && Math.random() < 0.35) this.vfx.flash(to, 0xff6633, 3, 0.12);
       }
+      this.vfx.setBeam(from, to, true);
     }
     if (!beamOn) {
       this.vfx.setBeam(null, null, false);

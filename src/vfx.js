@@ -26,9 +26,9 @@ export class VFX {
     this.smokeTex = radialTexture('rgba(180,180,185,0.55)', 'rgba(120,120,125,0)', 96);
 
     // --- laser beam (one instance, toggled) ---
-    const coreGeo = new THREE.CylinderGeometry(0.055, 0.055, 1, 12, 1, true);
+    const coreGeo = new THREE.CylinderGeometry(0.07, 0.07, 1, 12, 1, true);
     coreGeo.rotateX(Math.PI / 2); // align to +z
-    const glowGeo = new THREE.CylinderGeometry(0.2, 0.2, 1, 12, 1, true);
+    const glowGeo = new THREE.CylinderGeometry(0.34, 0.34, 1, 12, 1, true);
     glowGeo.rotateX(Math.PI / 2);
     this.beamCore = new THREE.Mesh(coreGeo, new THREE.MeshBasicMaterial({
       color: 0xffffff, transparent: true, opacity: 0.95, depthWrite: false,
@@ -122,8 +122,9 @@ export class VFX {
       color: 0x66ff66, transparent: true, opacity: 0.9,
       blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false,
     });
+    const ARCS = 8, SEGS = 14;
     const geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(6 * 8 * 3), 3));
+    geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(ARCS * SEGS * 2 * 3), 3));
     const lines = new THREE.LineSegments(geo, mat);
     lines.frustumCulled = false;
     group.add(lines);
@@ -147,14 +148,15 @@ export class VFX {
       acc = 0.05 + Math.random() * 0.06;
       const a = geo.attributes.position.array;
       let k = 0;
-      for (let arc = 0; arc < 6; arc++) {
-        // jagged arc across the surface of the chunk
-        let p = new THREE.Vector3().randomDirection().multiplyScalar(radius * 0.7);
-        for (let seg = 0; seg < 8; seg++) {
-          a[k++] = p.x; a[k++] = p.y; a[k++] = p.z;
-          p = p.clone().add(new THREE.Vector3().randomDirection().multiplyScalar(radius * 0.45));
-          p.clampLength(0, radius * 1.05);
-          a[k++] = p.x; a[k++] = p.y; a[k++] = p.z;
+      for (let arc = 0; arc < ARCS; arc++) {
+        // tight jagged arc crawling across the surface of the chunk
+        // arcs stretched vertically to wrap the tall chunk
+        let p = new THREE.Vector3().randomDirection().multiplyScalar(radius * 0.8);
+        for (let seg = 0; seg < SEGS; seg++) {
+          a[k++] = p.x; a[k++] = p.y * 1.8; a[k++] = p.z;
+          p = p.clone().add(new THREE.Vector3().randomDirection().multiplyScalar(radius * 0.2));
+          p.clampLength(radius * 0.55, radius * 0.95);
+          a[k++] = p.x; a[k++] = p.y * 1.8; a[k++] = p.z;
         }
       }
       geo.attributes.position.needsUpdate = true;

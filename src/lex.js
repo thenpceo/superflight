@@ -2,17 +2,17 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 
-const CHUNK_SPEED = 62;
+const CHUNK_SPEED = 78;
 const THROW_INTERVAL = 3.1;
 const TELEGRAPH_TIME = 0.9;
-const CHASE_SPEED = 21;
-const CATCHUP_SPEED = 38;     // when far away, he closes hard
-const PREFERRED_DIST = 55;
+const CHASE_SPEED = 27;
+const CATCHUP_SPEED = 50;     // when far away, he closes hard
+const PREFERRED_DIST = 75;
 
 /**
- * Lex Luthor: an unrigged Sketchfab model turned into a hover-tech villain.
- * All animation is procedural — platform bob/bank, lunge on throw,
- * recoil on hits — wrapped in green warsuit energy VFX.
+ * Lex Luthor: rigged Justice League suit with its own skeletal idle,
+ * plus additive procedural motion — platform bob/bank, arm-raise on
+ * telegraph, recoil on hits — wrapped in green energy VFX.
  */
 export class Lex {
   constructor(scene, vfx) {
@@ -120,9 +120,13 @@ export class Lex {
     const cb = new THREE.Box3().setFromObject(chunkGltf.scene);
     const cs = cb.getSize(new THREE.Vector3());
     this._chunkGeo = srcMesh.geometry;
-    this._chunkMat = srcMesh.material;
-    this._chunkScale = 7.5 / Math.max(cs.x, cs.y, cs.z); // ~7.5m debris
-    this._chunkRadius = 4.0;                              // gameplay hit radius
+    this._chunkMat = srcMesh.material.clone();
+    // kryptonite-charged: reads against the sunset instead of silhouetting
+    this._chunkMat.emissive = new THREE.Color(0x1c3a1c);
+    this._chunkMat.emissiveIntensity = 0.85;
+    this._chunkSize = cs.clone();
+    this._chunkScale = 52 / Math.max(cs.x, cs.y, cs.z); // ~52m — a real piece of skyline
+    this._chunkRadius = 15;                             // gameplay hit radius (forgiving vs the visual)
     return this;
   }
 
@@ -149,30 +153,31 @@ export class Lex {
   }
 
   /* ------------------------------ chunks ------------------------------ */
-  _spawnChunk(targetPos, targetVel) {
+  _spawnChunk(targetPos) {
     const mesh = new THREE.Mesh(this._chunkGeo, this._chunkMat);
-    mesh.scale.setScalar(this._chunkScale * (0.85 + Math.random() * 0.35));
+    const s = this._chunkScale * (0.85 + Math.random() * 0.3);
+    mesh.scale.setScalar(s);
     const holder = new THREE.Group();
     holder.add(mesh);
-    mesh.position.y = -3.2; // roughly center the geometry (base at 0 in source)
-    const fx = this.vfx.makeLightning(4.2);
+    mesh.position.y = -(this._chunkSize.y * s) / 2; // center the geometry (base at 0 in source)
+    this._chunkHover = this._chunkSize.y * this._chunkScale * 0.5 + 6;
+    const fx = this.vfx.makeLightning(this._chunkSize.y * s * 0.26);
     holder.add(fx);
-    holder.position.copy(this.position).add(new THREE.Vector3(0, 5.2, 0));
+    holder.position.copy(this.position).add(new THREE.Vector3(0, this._chunkHover, 0));
     this.scene.add(holder);
 
-    // lead the target: aim where the player will be
-    const eta = holder.position.distanceTo(targetPos) / CHUNK_SPEED;
-    const aim = targetPos.clone().addScaledVector(targetVel, eta * 0.85);
-    const dir = aim.sub(holder.position).normalize();
+    // dumb-fire: aimed at where you ARE, not where you're going — so you can dodge
+    const dir = targetPos.clone().sub(holder.position).normalize();
 
     const chunk = {
       holder, mesh, fx,
       vel: dir.multiplyScalar(CHUNK_SPEED),
-      spin: new THREE.Vector3().randomDirection().multiplyScalar(1.5 + Math.random() * 2),
-      life: 0, max: 7, hit: false, fading: 0,
+      spin: new THREE.Vector3().randomDirection().multiplyScalar(0.5 + Math.random() * 0.7),
+      life: 0, max: 10, hit: false, fading: 0,
+      halfH: (this._chunkSize.y * s) / 2,
     };
     this.chunks.push(chunk);
-    this.vfx.flash(holder.position, 0x66ff77, 10, 0.25);
+    this.vfx.flash(holder.position, 0x66ff77, 28, 0.3);
     return chunk;
   }
 
@@ -225,26 +230,25 @@ export class Lex {
       // ---- attack cycle ----
       if (player.gameActive && this.state === 'chase') {
         this._throwT -= dt;
-        if (this._throwT <= 0 && dist < 230 && this.chunks.filter(c => !c.dead).length < 3) {
+        if (this._throwT <= 0 && dist < 340 && this.chunks.filter(c => !c.dead).length < 3) {
           this.state = 'telegraph';
           this._stateT = 0;
-          this._pending = this._spawnChunk(player.position, player.velocity);
+          this._pending = this._spawnChunk(player.position);
           this._pending.held = true;
           this.vfx.shockwave(this.position, 0x55ff66, 8, 0.4);
         }
       } else if (this.state === 'telegraph') {
         // chunk hovers above him, crackling, then launches
         if (this._pending && !this._pending.dead) {
-          this._pending.holder.position.copy(this.position).add(new THREE.Vector3(0, 5.2 + Math.sin(this._stateT * 9) * 0.5, 0));
+          this._pending.holder.position.copy(this.position).add(new THREE.Vector3(0, this._chunkHover + Math.sin(this._stateT * 9) * 1.5, 0));
         }
         this._lungeK = Math.min(1, this._stateT / TELEGRAPH_TIME);
         if (this._stateT >= TELEGRAPH_TIME) {
           if (this._pending && !this._pending.dead) {
             this._pending.held = false;
-            const eta = this._pending.holder.position.distanceTo(player.position) / CHUNK_SPEED;
-            const aim = player.position.clone().addScaledVector(player.velocity, eta * 0.85);
-            this._pending.vel.copy(aim.sub(this._pending.holder.position).normalize().multiplyScalar(CHUNK_SPEED));
-            this.vfx.flash(this._pending.holder.position, 0x88ffaa, 14, 0.2);
+            // straight at the player's CURRENT spot — outrun it or eat it
+            this._pending.vel.copy(player.position.clone().sub(this._pending.holder.position).normalize().multiplyScalar(CHUNK_SPEED));
+            this.vfx.flash(this._pending.holder.position, 0x88ffaa, 30, 0.25);
           }
           this._pending = null;
           this.state = 'chase';
@@ -320,15 +324,16 @@ export class Lex {
         }
         // past the player and receding, or expired → fade out
         const receding = c.vel.dot(player.position.clone().sub(c.holder.position)) < 0;
-        if ((receding && dp > 60) || c.life > c.max) {
+        if ((receding && dp > 140) || c.life > c.max) {
           this._despawnChunk(c, false);
-          this.vfx.flash(c.holder.position, 0x66ff77, 8, 0.3);
+          this.vfx.flash(c.holder.position, 0x66ff77, 18, 0.3);
           continue;
         }
-        // chunks smash through buildings with a puff
-        if (Math.random() < 0.1) {
-          const hit = c.holder.position.y < 2;
-          if (hit) { this._despawnChunk(c, true); continue; }
+        // smashes into the street in a big plume
+        if (c.holder.position.y - c.halfH * 0.5 < 0) {
+          this._despawnChunk(c, true);
+          this.vfx.shockwave(c.holder.position.clone().setY(2), 0x88ffaa, 60, 0.8);
+          continue;
         }
       }
     }
