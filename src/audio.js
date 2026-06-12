@@ -95,6 +95,7 @@ export class SFX {
   }
 
   boom() { this._noiseBurst(0.7, 220, 0.8); }
+  boomFar(vol = 0.3) { this._noiseBurst(1.2, 90, vol); }
   punch() { this._noiseBurst(0.16, 350, 0.9); this._noiseBurst(0.4, 120, 0.6); }
   whoosh() { this._noiseBurst(0.5, 1200, 0.25, 'bandpass'); }
 }

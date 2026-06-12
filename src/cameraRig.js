@@ -29,21 +29,24 @@ export class CameraRig {
   _computeIdeal(state, outPos, outLook) {
     const s = state.speed01;
     const b = state.boost01;
-    const o = this._tmpOff;
     const hov = CONFIG.camHoverOffset, fly = CONFIG.camFlightOffset, bst = CONFIG.camBoostOffset;
-    o.set(
-      THREE.MathUtils.lerp(THREE.MathUtils.lerp(hov[0], fly[0], s), bst[0], b),
-      THREE.MathUtils.lerp(THREE.MathUtils.lerp(hov[1], fly[1], s), bst[1], b),
-      THREE.MathUtils.lerp(THREE.MathUtils.lerp(hov[2], fly[2], s), bst[2], b)
-    );
-    o.applyAxisAngle(new THREE.Vector3(0, 1, 0), state.yaw);
-    outPos.copy(state.position).add(o);
-    // keep horizon mostly stable: look ahead of the flyer
-    this._fwd.set(-Math.sin(state.yaw), 0, -Math.cos(state.yaw));
+    const sideX = THREE.MathUtils.lerp(THREE.MathUtils.lerp(hov[0], fly[0], s), bst[0], b);
+    const height = THREE.MathUtils.lerp(THREE.MathUtils.lerp(hov[1], fly[1], s), bst[1], b);
+    const dist = THREE.MathUtils.lerp(THREE.MathUtils.lerp(hov[2], fly[2], s), bst[2], b);
+
+    // full look direction (yaw + damped pitch) → free look up/down/left/right
+    const pitch = (state.pitch ?? 0) * 0.82;
+    const cp = Math.cos(pitch), sp = Math.sin(pitch);
+    const lookDir = this._fwd.set(-Math.sin(state.yaw) * cp, sp, -Math.cos(state.yaw) * cp);
+    const right = this._tmpOff.set(Math.cos(state.yaw), 0, -Math.sin(state.yaw));
+
+    outPos.copy(state.position).addScaledVector(lookDir, -dist).addScaledVector(right, sideX);
+    outPos.y += height;
+
     outLook.copy(state.position)
-      .addScaledVector(this._fwd, CONFIG.camLookAhead * (0.4 + 0.6 * s))
-      .addScaledVector(state.velocity, 0.06)
-      .add(new THREE.Vector3(0, 0.6, 0));
+      .addScaledVector(lookDir, CONFIG.camLookAhead * (0.4 + 0.6 * s))
+      .addScaledVector(state.velocity, 0.06);
+    outLook.y += 0.4;
   }
 
   kick(amount = 1) { this._shakeImpulse = Math.min(1.5, this._shakeImpulse + amount); }
@@ -70,6 +73,9 @@ export class CameraRig {
         this.pos.copy(state.position).addScaledVector(toCam, Math.max(0.8, hit.distance - 0.35));
       }
     }
+    // keep the camera from dipping into the street
+    const cg = this.world?.groundDistance(this.pos);
+    if (cg !== null && cg !== undefined && cg < 1.4) this.pos.y += (1.4 - cg);
 
     this.camera.position.copy(this.pos);
     this.camera.lookAt(this.look);

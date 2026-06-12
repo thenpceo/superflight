@@ -10,6 +10,8 @@ import { VFX } from './vfx.js';
 import { Lex } from './lex.js';
 import { Game } from './game.js';
 import { HUD } from './hud.js';
+import { Ambient } from './ambient.js';
+import { LexDialog } from './dialog.js';
 
 const params = new URLSearchParams(location.search);
 const NO_POST = params.has('nopost');
@@ -41,6 +43,7 @@ const vfx = new VFX(scene);
 const city = new City(scene);
 const character = new Character(scene);
 const lex = new Lex(scene, vfx);
+const ambient = new Ambient(scene, vfx, city, null);
 
 let progress = { city: 0, char: 0, lex: 0 };
 const setBar = () => {
@@ -61,6 +64,9 @@ async function boot() {
   await lex.load();
   progress.lex = 1; setBar();
 
+  ambient.sfx = sfx;
+  await ambient.load();
+
   // place the player & the villain
   flight.position.copy(city.spawn);
   flight.yaw = city.spawnYaw;
@@ -78,6 +84,8 @@ const sfx = new SFX(wind);
 const music = new Music(wind);
 const hud = new HUD();
 const game = new Game({ flight, character, lex, vfx, rig, sfx, hud });
+const dialog = new LexDialog(music);
+game.dialog = dialog;
 
 let started = POSE_DEBUG;
 let paused = false;
@@ -95,6 +103,7 @@ startEl.addEventListener('click', () => {
   hudEl.classList.add('visible');
   wind.start();
   music.start();
+  dialog.onGameStart();
   renderer.domElement.requestPointerLock?.();
   started = true;
 });
@@ -180,6 +189,8 @@ function tick(dt) {
       game.update(dt, camera);
       if (!window.__freeCam) rig.update(dt, state);
       sky.update(dt, flight.position);
+      ambient.update(sdt, flight.position);
+      dialog.update(dt, game.gameActive && started);
       vfx.update(sdt);
       wind.update(state);
 

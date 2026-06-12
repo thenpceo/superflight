@@ -4,7 +4,7 @@ const LASER_RANGE = 360;
 const LASER_DPS = 40;
 const STICKY_RADIUS = 3.5; // beam snaps to Lex if your aim passes this close
 const PUNCH_RANGE = 9;
-const PUNCH_DMG = 46;
+const PUNCH_DMG = 115;
 const CHUNK_DMG = 18;
 
 /**
@@ -64,21 +64,22 @@ export class Game {
     this.stumbleT = 1.1;
     // knockback along the chunk's motion + stop forward momentum
     this.flight.velocity.multiplyScalar(0.15);
-    this.flight.velocity.addScaledVector(chunk.vel.clone().normalize(), 16);
-    this.flight.velocity.y += 5;
-    this.flight.speed = 0;
+    this.flight.velocity.addScaledVector(chunk.vel.clone().normalize(), 22);
+    this.flight.velocity.y += 6;
     this.rig.kick(1.4);
     this.vfx.smokeBurst(this.flight.position, 1.5);
     this.vfx.flash(this.flight.position, 0xffaa66, 8, 0.25);
     this.sfx?.boom();
     this.hud.damageFlash();
     if (this.hp <= 0) this._defeat();
+    else this.dialog?.onPlayerHit();
   }
 
   _defeat() {
     this.state = 'dead';
     this.vfx.smokeBurst(this.flight.position, 2);
     this.hud.showEnd(false);
+    this.dialog?.onPlayerDeath();
     document.exitPointerLock?.();
   }
 
@@ -95,7 +96,6 @@ export class Game {
     const f = this.flight;
     f.position.copy(f.world.spawn);
     f.velocity.set(0, 0, 0);
-    f.speed = 0;
     f.yaw = f.world.spawnYaw; f.pitch = 0;
     // reset Lex
     const lex = this.lex;
@@ -121,7 +121,7 @@ export class Game {
     // stumble: damp player control
     if (this.stumbleT > 0) {
       this.stumbleT -= dt;
-      this.flight.speed *= Math.max(0, 1 - 6 * dt);
+      this.flight.velocity.multiplyScalar(Math.max(0, 1 - 2.5 * dt));
     }
 
     this.punchCd = Math.max(0, this.punchCd - dt);
@@ -161,7 +161,9 @@ export class Game {
       let to;
       if (hittingLex) {
         to = lex.position.clone().add(new THREE.Vector3(0, 0.4, 0));
+        const hpBefore = lex.hp;
         lex.damage(LASER_DPS * dt, null);
+        if (hpBefore > lex.maxHp * 0.25 && lex.hp <= lex.maxHp * 0.25) this.dialog?.onLexLowHp();
         if (Math.random() < 0.3) this.vfx.flash(to.clone().add(new THREE.Vector3().randomDirection().multiplyScalar(0.8)), 0xff4422, 1.6, 0.1);
         this.hud.hitmark();
         if (lex.dead) this._victory();

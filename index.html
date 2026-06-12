@@ -154,6 +154,27 @@
 
       #lex-dist { font-size: 10px; letter-spacing: 0.2em; color: #8aa893; margin-top: 5px; }
 
+      /* ---------- Lex dialog ---------- */
+      #dialog {
+        position: absolute; left: 28px; top: 50%; transform: translate(-16px, -50%);
+        display: flex; align-items: center; gap: 14px;
+        max-width: min(420px, 44vw);
+        background: rgba(8, 12, 9, 0.72); border: 1px solid rgba(90, 255, 130, 0.35);
+        border-radius: 14px; padding: 12px 18px 12px 12px;
+        opacity: 0; transition: opacity 0.3s ease, transform 0.3s ease;
+        box-shadow: 0 0 30px rgba(40, 220, 90, 0.25);
+      }
+      #dialog.visible { opacity: 1; transform: translate(0, -50%); }
+      #dialog img {
+        width: 64px; height: 64px; border-radius: 10px; flex: none;
+        border: 1px solid rgba(90, 255, 130, 0.5);
+      }
+      #dialog .who {
+        font-size: 9px; letter-spacing: 0.4em; text-transform: uppercase;
+        color: #8dffa8; margin-bottom: 5px;
+      }
+      #dialog-text { font-size: 13px; line-height: 1.45; color: #eaf6ec; letter-spacing: 0.03em; }
+
       /* ---------- end screen ---------- */
       #end {
         position: fixed; inset: 0; z-index: 35; display: flex; flex-direction: column;
@@ -216,6 +237,13 @@
         <div id="hp-track"><div id="hp-fill"></div></div>
         <div id="heat-track"><div id="heat-fill"></div></div>
         <div id="punch-hint">punch range</div>
+      </div>
+      <div id="dialog">
+        <img src="/assets/lex_portrait_sm.png" alt="Lex Luthor" />
+        <div>
+          <div class="who">Lex Luthor</div>
+          <div id="dialog-text"></div>
+        </div>
       </div>
       <div id="crosshair"></div>
       <div id="dmg-vignette"></div>

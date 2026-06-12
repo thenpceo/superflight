@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 
-const CHUNK_SPEED = 78;
+const CHUNK_SPEED = 95;
 const THROW_INTERVAL = 3.1;
 const TELEGRAPH_TIME = 0.9;
 const CHASE_SPEED = 27;
@@ -125,8 +125,8 @@ export class Lex {
     this._chunkMat.emissive = new THREE.Color(0x1c3a1c);
     this._chunkMat.emissiveIntensity = 0.85;
     this._chunkSize = cs.clone();
-    this._chunkScale = 52 / Math.max(cs.x, cs.y, cs.z); // ~52m — a real piece of skyline
-    this._chunkRadius = 15;                             // gameplay hit radius (forgiving vs the visual)
+    this._chunkScale = 260 / Math.max(cs.x, cs.y, cs.z); // ~260m — an entire thrown skyscraper
+    this._chunkRadius = 38;                             // gameplay hit radius (forgiving vs the visual)
     return this;
   }
 
@@ -160,7 +160,7 @@ export class Lex {
     const holder = new THREE.Group();
     holder.add(mesh);
     mesh.position.y = -(this._chunkSize.y * s) / 2; // center the geometry (base at 0 in source)
-    this._chunkHover = this._chunkSize.y * this._chunkScale * 0.5 + 6;
+    this._chunkHover = this._chunkSize.y * this._chunkScale * 0.5 + 12;
     const fx = this.vfx.makeLightning(this._chunkSize.y * s * 0.26);
     holder.add(fx);
     holder.position.copy(this.position).add(new THREE.Vector3(0, this._chunkHover, 0));
@@ -173,7 +173,7 @@ export class Lex {
       holder, mesh, fx,
       vel: dir.multiplyScalar(CHUNK_SPEED),
       spin: new THREE.Vector3().randomDirection().multiplyScalar(0.5 + Math.random() * 0.7),
-      life: 0, max: 10, hit: false, fading: 0,
+      life: 0, max: 14, hit: false, fading: 0,
       halfH: (this._chunkSize.y * s) / 2,
     };
     this.chunks.push(chunk);
@@ -324,7 +324,7 @@ export class Lex {
         }
         // past the player and receding, or expired → fade out
         const receding = c.vel.dot(player.position.clone().sub(c.holder.position)) < 0;
-        if ((receding && dp > 140) || c.life > c.max) {
+        if ((receding && dp > 380) || c.life > c.max) {
           this._despawnChunk(c, false);
           this.vfx.flash(c.holder.position, 0x66ff77, 18, 0.3);
           continue;

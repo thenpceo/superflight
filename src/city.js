@@ -27,9 +27,9 @@ function toFloatGeometry(src, matrix) {
   return out;
 }
 
-const GRID_X = 4;          // tiles across
-const GRID_Z = 9;          // tiles deep — a long Manhattan-style stretch
-const TILE_TARGET = 580;   // meters — 2x scale, properly tall skyscrapers
+const GRID_X = 5;          // tiles across
+const GRID_Z = 5;          // tiles deep
+const TILE_TARGET = 560;   // meters — normalize the tile footprint to this
 
 /**
  * The instanced city: one merged geometry per material rendered as
@@ -56,16 +56,13 @@ export class City {
   async load() {
     const loader = new GLTFLoader();
     loader.setMeshoptDecoder(MeshoptDecoder);
-    const gltf = await loader.loadAsync('/assets/city_opt.glb');
+    const gltf = await loader.loadAsync('/assets/city2_opt.glb');
     const root = gltf.scene;
     root.updateMatrixWorld(true);
 
-    // ---- measure and normalize: find up axis (smallest extent), scale to target ----
-    const box = new THREE.Box3().setFromObject(root);
-    const size = box.getSize(new THREE.Vector3());
+    // ---- measure and normalize the footprint to TILE_TARGET (y-up) ----
     const wrap = new THREE.Group();
     wrap.add(root);
-    if (size.z < size.y && size.z < size.x) wrap.rotation.x = -Math.PI / 2; // z-up source
     wrap.updateMatrixWorld(true);
     let b = new THREE.Box3().setFromObject(wrap);
     let s = b.getSize(new THREE.Vector3());
